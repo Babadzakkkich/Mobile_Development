@@ -1,6 +1,6 @@
 import java.util.Scanner;
 
-public class Program {
+public class First {
 
     public static void main(String[] args) {
         try (Scanner scanner = new Scanner(System.in)) {
@@ -13,7 +13,7 @@ public class Program {
                 switch (choice) {
                     case 1 -> task1(scanner);
                     case 2 -> task2(scanner);
-                    case 3 -> task3();
+                     case 3 -> task3();
                     case 4 -> task4(scanner);
                     case 5 -> task5(scanner);
                     case 6 -> task6(scanner);
