@@ -5,7 +5,7 @@ public class First {
     public static void main(String[] args) {
         try (Scanner scanner = new Scanner(System.in)) {
             int choice;
-            do {
+            do { 
                 System.out.println("Выберите задачу (1-20) или введите 0 для выхода:");
                 choice = scanner.nextInt();
                 
