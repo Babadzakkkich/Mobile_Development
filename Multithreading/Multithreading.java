@@ -6,7 +6,7 @@ import java.util.concurrent.locks.*;
 
 public class Multithreading {
 
-    public static void main(String[] args) throws InterruptedException, ExecutionException {
+    public static void main(String[] args) {
         try (Scanner scanner = new Scanner(System.in)) {
             int choice;
             do {
@@ -68,7 +68,8 @@ public class Multithreading {
             try {
                 thread.join();
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                System.err.println("Поток был прерван.");
+                Thread.currentThread().interrupt();
             }
         }
 
@@ -93,7 +94,8 @@ public class Multithreading {
             try {
                 thread.join();
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                System.err.println("Поток был прерван.");
+                Thread.currentThread().interrupt();
             }
         }
 
@@ -171,7 +173,8 @@ public class Multithreading {
             t1.join();
             t2.join();
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            System.err.println("Поток был прерван.");
+            Thread.currentThread().interrupt();
         }
 
         System.out.println("Баланс аккаунта 1: " + account1.getBalance());
@@ -193,8 +196,8 @@ public class Multithreading {
                     Thread.sleep(1000); // Имитация работы
                     barrier.await();
                     System.out.println("Поток " + threadId + " перешёл ко второй фазе.");
-                } catch (Exception e) {
-                    e.printStackTrace();
+                } catch (InterruptedException | BrokenBarrierException e) {
+                    System.err.println("Ошибка в потоке " + threadId + ": " + e.getMessage());
                 }
             }).start();
         }
@@ -211,7 +214,8 @@ public class Multithreading {
                 System.out.println(Thread.currentThread().getName() + " получил доступ!");
                 Thread.sleep(2000); // Имитация работы
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                System.err.println("Поток был прерван.");
+                Thread.currentThread().interrupt();
             } finally {
                 semaphore.release();
                 System.out.println(Thread.currentThread().getName() + " освободил доступ.");
@@ -224,7 +228,7 @@ public class Multithreading {
     }
 
     // Задача 7: Обработка результатов задач
-    public static void task7() throws InterruptedException, ExecutionException {
+    public static void task7() {
         ExecutorService executor = Executors.newFixedThreadPool(10);
         List<Future<Integer>> futures = new ArrayList<>();
 
@@ -241,7 +245,11 @@ public class Multithreading {
         }
 
         for (int i = 0; i < futures.size(); i++) {
-            System.out.println("Факториал " + (i + 1) + ": " + futures.get(i).get());
+            try {
+                System.out.println("Факториал " + (i + 1) + ": " + futures.get(i).get());
+            } catch (InterruptedException | ExecutionException e) {
+                System.err.println("Ошибка при выполнении задачи: " + e.getMessage());
+            }
         }
 
         executor.shutdown();
@@ -256,10 +264,11 @@ public class Multithreading {
                 for (int i = 1; i <= 20; i++) {
                     queue.put(i);
                     System.out.println("Производитель добавил: " + i);
-                    Thread.sleep(500);
+                    Thread.sleep(500); // Имитация работы
                 }
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                System.err.println("Поток был прерван.");
+                Thread.currentThread().interrupt();
             }
         });
 
@@ -268,10 +277,11 @@ public class Multithreading {
                 while (true) {
                     int data = queue.take();
                     System.out.println("Потребитель обработал: " + data);
-                    Thread.sleep(1000);
+                    Thread.sleep(1000); // Имитация работы
                 }
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                System.err.println("Поток был прерван.");
+                Thread.currentThread().interrupt();
             }
         });
 
@@ -282,8 +292,13 @@ public class Multithreading {
     // Задача 9: Многопоточная сортировка
     public static void task9() {
         int[] array = {5, 3, 8, 6, 2, 7, 4, 1};
-        ForkJoinPool pool = new ForkJoinPool();
-        pool.invoke(new SortTask(array, 0, array.length - 1));
+        try (ForkJoinPool pool = new ForkJoinPool()) {
+            try {
+                pool.invoke(new SortTask(array, 0, array.length - 1));
+            } finally {
+                pool.shutdown();
+            }
+        }
         System.out.println(Arrays.toString(array));
     }
 
@@ -354,7 +369,7 @@ public class Multithreading {
 
             private void think() throws InterruptedException {
                 System.out.println("Философ " + id + " думает.");
-                Thread.sleep(1000);
+                Thread.sleep(1000); // Имитация работы
             }
 
             private void eat() throws InterruptedException {
@@ -363,7 +378,7 @@ public class Multithreading {
                     rightFork.lock();
                     try {
                         System.out.println("Философ " + id + " ест.");
-                        Thread.sleep(1000);
+                        Thread.sleep(1000); // Имитация работы
                     } finally {
                         rightFork.unlock();
                     }
@@ -385,7 +400,7 @@ public class Multithreading {
     }
 
     // Задача 11: Умножение матриц в параллельных потоках
-    public static void task11() throws InterruptedException {
+    public static void task11() {
         int[][] matrixA = {{1, 2}, {3, 4}};
         int[][] matrixB = {{5, 6}, {7, 8}};
         int[][] result = new int[2][2];
@@ -404,7 +419,12 @@ public class Multithreading {
         }
 
         executor.shutdown();
-        while (!executor.isTerminated()) {}
+        try {
+            executor.awaitTermination(1, TimeUnit.MINUTES);
+        } catch (InterruptedException e) {
+            System.err.println("Поток был прерван.");
+            Thread.currentThread().interrupt();
+        }
 
         System.out.println("Результат умножения матриц:");
         for (int[] row : result) {
@@ -418,19 +438,21 @@ public class Multithreading {
             try {
                 for (int i = 1; i <= 10; i++) {
                     System.out.println("Текущее время: " + i + " сек.");
-                    Thread.sleep(1000);
+                    Thread.sleep(1000); // Имитация работы
                 }
             } catch (InterruptedException e) {
                 System.out.println("Таймер остановлен.");
+                Thread.currentThread().interrupt();
             }
         });
 
         Thread stopperThread = new Thread(() -> {
             try {
-                Thread.sleep(10000);
-                timerThread.interrupt();
+                Thread.sleep(10000); // Ожидание 10 секунд
+                timerThread.interrupt(); // Прерывание таймера
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                System.err.println("Поток был прерван.");
+                Thread.currentThread().interrupt();
             }
         });
 
