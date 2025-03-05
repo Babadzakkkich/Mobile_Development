@@ -33,7 +33,10 @@ abstract class Animal {
     public abstract void eat(Cell cell);
 
     public void reproduce(Cell cell) {
-        if (satiety >= foodRequired * REPRODUCTION_THRESHOLD && random.nextDouble() < 0.5 && cell.getAnimals().size() < maxPerCell) {
+        if (satiety >= foodRequired * REPRODUCTION_THRESHOLD && 
+            random.nextDouble() < 0.5 && 
+            cell.getAnimals().size() < maxPerCell) {
+            
             try {
                 Animal child = this.getClass()
                         .getDeclaredConstructor(int.class, int.class, Island.class)
@@ -77,7 +80,7 @@ abstract class Animal {
     }
 }
 
-// Классы хищников
+// Хищники
 abstract class Predator extends Animal {
     protected Map<Class<?>, Double> eatProbabilities = new HashMap<>();
 
@@ -100,6 +103,30 @@ abstract class Predator extends Animal {
     }
 }
 
+// Травоядные
+abstract class Herbivore extends Animal {
+    public Herbivore(int x, int y, double weight, int maxPerCell, int speed, double foodRequired, Island island, String symbol) {
+        super(x, y, weight, maxPerCell, speed, foodRequired, island, symbol);
+    }
+
+    @Override
+    public void eat(Cell cell) {
+        List<Plant> plants = cell.getPlants();
+        if (!plants.isEmpty()) {
+            Plant plant = plants.get(0);
+            satiety += plant.getWeight();
+            cell.removePlant(plant);
+        }
+    }
+}
+
+// Класс растений
+class Plant {
+    private static final double WEIGHT = 1.0;
+    public double getWeight() { return WEIGHT; }
+}
+
+// Конкретные хищники
 class Wolf extends Predator {
     public Wolf(int x, int y, Island island) {
         super(x, y, 50, 30, 3, 8, island, "W");
@@ -143,21 +170,7 @@ class Eagle extends Predator {
     }
 }
 
-// Классы травоядных
-abstract class Herbivore extends Animal {
-    public Herbivore(int x, int y, double weight, int maxPerCell, int speed, double foodRequired, Island island, String symbol) {
-        super(x, y, weight, maxPerCell, speed, foodRequired, island, symbol);
-    }
-
-    @Override
-    public void eat(Cell cell) {
-        if (cell.getPlants() > 0) {
-            cell.consumePlant();
-            satiety += 1.0;
-        }
-    }
-}
-
+// Конкретные травоядные
 class Horse extends Herbivore {
     public Horse(int x, int y, Island island) {
         super(x, y, 400, 20, 4, 60, island, "H");
@@ -233,8 +246,12 @@ class Caterpillar extends Herbivore {
 // Класс клетки
 class Cell {
     private List<Animal> animals = new CopyOnWriteArrayList<>();
-    private int plants = 0;
-    private Random random = new Random();
+    private List<Plant> plants = new CopyOnWriteArrayList<>();
+    private static final Random random = new Random();
+
+    public synchronized List<Animal> getAnimals() {
+        return animals;
+    }
 
     public synchronized void addAnimal(Animal animal) {
         if (animals.size() < animal.maxPerCell) {
@@ -246,22 +263,28 @@ class Cell {
         animals.remove(animal);
     }
 
-    public List<Animal> getAnimals() {
-        return animals;
+    public synchronized List<Plant> getPlants() {
+        return plants;
+    }
+
+    public synchronized void addPlant(Plant plant) {
+        plants.add(plant);
+    }
+
+    public synchronized void removePlant(Plant plant) {
+        plants.remove(plant);
     }
 
     public synchronized void consumePlant() {
-        if (plants > 0) plants--;
+        if (!plants.isEmpty()) {
+            plants.remove(0);
+        }
     }
 
     public synchronized void growPlants() {
         if (random.nextInt(100) < 20) {
-            plants += 10;
+            plants.add(new Plant());
         }
-    }
-
-    public synchronized int getPlants() {
-        return plants;
     }
 }
 
@@ -326,7 +349,33 @@ class Island {
         }, 0, 1, TimeUnit.SECONDS);
     }
 
-    // Восстановленный метод отрисовки
+    private void printStatistics() {
+        Map<Class<?>, Integer> counts = new HashMap<>();
+        int totalPlants = 0;
+
+        for (int i = 0; i < width; i++) {
+            for (int j = 0; j < height; j++) {
+                totalPlants += grid[i][j].getPlants().size();
+                for (Animal animal : grid[i][j].getAnimals()) {
+                    counts.put(animal.getClass(), counts.getOrDefault(animal.getClass(), 0) + 1);
+                }
+            }
+        }
+
+        System.out.println("\nСтатистика:");
+        printGroup("Хищники", counts, Wolf.class, Python.class, Fox.class, Bear.class, Eagle.class);
+        printGroup("Травоядные", counts, Horse.class, Deer.class, Rabbit.class, Mouse.class, 
+            Goat.class, Sheep.class, Boar.class, Buffalo.class, Duck.class, Caterpillar.class);
+        System.out.println("Растений: " + totalPlants);
+    }
+
+    private void printGroup(String groupName, Map<Class<?>, Integer> counts, Class<?>... classes) {
+        System.out.println(groupName + ":");
+        for (Class<?> clazz : classes) {
+            System.out.printf("%-10s: %d\n", clazz.getSimpleName(), counts.getOrDefault(clazz, 0));
+        }
+    }
+
     public void drawIsland() {
         System.out.println("\nОстров (" + width + "x" + height + "):");
         System.out.println("=".repeat(width * 2 + 2));
@@ -337,7 +386,7 @@ class Island {
                 Cell cell = grid[i][j];
                 List<Animal> animals = cell.getAnimals();
                 String symbol = animals.isEmpty()
-                    ? (cell.getPlants() > 0 ? "* " : ". ")
+                    ? (cell.getPlants().isEmpty() ? ". " : "* ")
                     : animals.get(0).getSymbol() + " ";
                 System.out.print(symbol);
             }
@@ -346,46 +395,9 @@ class Island {
         System.out.println("=".repeat(width * 2 + 2));
     }
 
-    // Восстановленный метод статистики
-    private void printStatistics() {
-        Map<Class<?>, Integer> counts = new HashMap<>();
-        int totalPlants = 0;
-
-        for (int i = 0; i < width; i++) {
-            for (int j = 0; j < height; j++) {
-                Cell cell = grid[i][j];
-                totalPlants += cell.getPlants();
-                for (Animal animal : cell.getAnimals()) {
-                    counts.put(animal.getClass(), counts.getOrDefault(animal.getClass(), 0) + 1);
-                }
-            }
-        }
-
-        System.out.println("\nСтатистика:");
-        System.out.println("Растений: " + totalPlants);
-        printGroup("Хищники", counts, Wolf.class, Python.class, Fox.class, Bear.class, Eagle.class);
-        printGroup("Травоядные", counts, Horse.class, Deer.class, Rabbit.class, Mouse.class, 
-            Goat.class, Sheep.class, Boar.class, Buffalo.class, Duck.class, Caterpillar.class);
-    }
-
-    private void printGroup(String groupName, Map<Class<?>, Integer> counts, Class<?>... classes) {
-        System.out.println(groupName + ":");
-        for (Class<?> clazz : classes) {
-            System.out.printf("%-10s: %d\n", clazz.getSimpleName(), counts.getOrDefault(clazz, 0));
-        }
-    }
-
-    public int getWidth() {
-        return width;
-    }
-
-    public int getHeight() {
-        return height;
-    }
-
-    public Cell getCell(int x, int y) {
-        return grid[x][y];
-    }
+    public int getWidth() { return width; }
+    public int getHeight() { return height; }
+    public Cell getCell(int x, int y) { return grid[x][y]; }
 }
 
 // Главный класс
@@ -402,7 +414,7 @@ public class App {
         addAnimals(island, Horse.class, 20, rnd);
         addAnimals(island, Deer.class, 20, rnd);
         addAnimals(island, Rabbit.class, 30, rnd);
-        //addAnimals(island, Mouse.class, 50, rnd);
+        addAnimals(island, Mouse.class, 50, rnd);
         addAnimals(island, Goat.class, 20, rnd);
         addAnimals(island, Sheep.class, 20, rnd);
         addAnimals(island, Boar.class, 10, rnd);
