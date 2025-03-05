@@ -1,12 +1,13 @@
-import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
+// Абстрактный класс Animal
 abstract class Animal {
     protected static final double REPRODUCTION_THRESHOLD = 0.5;
     protected static final double NEWBORN_SATIETY = 0.1;
-    
+    protected static final Random random = new Random();
+
     protected int x;
     protected int y;
     protected double weight;
@@ -15,7 +16,6 @@ abstract class Animal {
     protected double foodRequired;
     protected double satiety;
     protected Island island;
-    protected static final Random random = new Random();
     protected String symbol;
 
     public Animal(int x, int y, double weight, int maxPerCell, int speed, double foodRequired, Island island, String symbol) {
@@ -30,24 +30,16 @@ abstract class Animal {
         this.symbol = symbol;
     }
 
-    public Animal(int x, int y, double weight, int maxPerCell, int speed, double foodRequired, Island island, String symbol, double initialSatiety) {
-        this(x, y, weight, maxPerCell, speed, foodRequired, island, symbol);
-        this.satiety = initialSatiety;
-    }
-
     public abstract void eat(Cell cell);
-    
+
     public void reproduce(Cell cell) {
-        if (satiety >= foodRequired * REPRODUCTION_THRESHOLD && 
-            random.nextDouble() < 0.5 &&
-            cell.getAnimals().size() < maxPerCell) {
-            
+        if (satiety >= foodRequired * REPRODUCTION_THRESHOLD && random.nextDouble() < 0.5 && cell.getAnimals().size() < maxPerCell) {
             try {
                 Animal child = this.getClass()
-                    .getDeclaredConstructor(int.class, int.class, Island.class, double.class)
-                    .newInstance(x, y, island, NEWBORN_SATIETY * foodRequired);
+                        .getDeclaredConstructor(int.class, int.class, Island.class)
+                        .newInstance(x, y, island);
                 cell.addAnimal(child);
-            } catch (IllegalAccessException | IllegalArgumentException | InstantiationException | NoSuchMethodException | SecurityException | InvocationTargetException e) {
+            } catch (Exception e) {
                 e.printStackTrace();
             }
         }
@@ -60,7 +52,7 @@ abstract class Animal {
         int newY = Math.max(0, Math.min(island.getHeight() - 1, y + dy));
         Cell currentCell = island.getCell(x, y);
         Cell newCell = island.getCell(newX, newY);
-        
+
         if (newCell.getAnimals().size() < maxPerCell) {
             currentCell.removeAnimal(this);
             newCell.addAnimal(this);
@@ -71,12 +63,13 @@ abstract class Animal {
 
     public void loseEnergy() {
         satiety -= 0.1 * foodRequired;
-        if (satiety <= 0) die();
+        if (satiety <= 0) {
+            die();
+        }
     }
 
     public void die() {
-        Cell cell = island.getCell(x, y);
-        if (cell != null) cell.removeAnimal(this);
+        island.getCell(x, y).removeAnimal(this);
     }
 
     public String getSymbol() {
@@ -84,21 +77,21 @@ abstract class Animal {
     }
 }
 
-// Хищники
-class Wolf extends Animal {
-    private static final Map<Class<?>, Double> EAT_PROBABILITIES = new HashMap<>();
-    static { EAT_PROBABILITIES.put(Rabbit.class, 0.6); EAT_PROBABILITIES.put(Mouse.class, 0.8); }
+// Классы хищников
+abstract class Predator extends Animal {
+    protected Map<Class<?>, Double> eatProbabilities = new HashMap<>();
 
-    public Wolf(int x, int y, Island island) { super(x, y, 50, 30, 3, 8, island, "W"); }
-    public Wolf(int x, int y, Island island, double initialSatiety) { super(x, y, 50, 30, 3, 8, island, "W", initialSatiety); }
+    public Predator(int x, int y, double weight, int maxPerCell, int speed, double foodRequired, Island island, String symbol) {
+        super(x, y, weight, maxPerCell, speed, foodRequired, island, symbol);
+    }
 
     @Override
     public void eat(Cell cell) {
-        for (Class<?> preyClass : EAT_PROBABILITIES.keySet()) {
+        for (Class<?> preyClass : eatProbabilities.keySet()) {
             Optional<Animal> prey = cell.getAnimals().stream()
                     .filter(preyClass::isInstance)
                     .findFirst();
-            if (prey.isPresent() && random.nextDouble() < EAT_PROBABILITIES.get(preyClass)) {
+            if (prey.isPresent() && random.nextDouble() < eatProbabilities.get(preyClass)) {
                 satiety += prey.get().weight;
                 cell.removeAnimal(prey.get());
                 break;
@@ -107,211 +100,116 @@ class Wolf extends Animal {
     }
 }
 
-class Python extends Animal {
-    private static final Map<Class<?>, Double> EAT_PROBABILITIES = new HashMap<>();
-    static { EAT_PROBABILITIES.put(Rabbit.class, 0.2); EAT_PROBABILITIES.put(Mouse.class, 0.4); }
-
-    public Python(int x, int y, Island island) { super(x, y, 15, 30, 1, 3, island, "P"); }
-    public Python(int x, int y, Island island, double initialSatiety) { super(x, y, 15, 30, 1, 3, island, "P", initialSatiety); }
-
-    @Override
-    public void eat(Cell cell) {
-        for (Class<?> preyClass : EAT_PROBABILITIES.keySet()) {
-            Optional<Animal> prey = cell.getAnimals().stream()
-                    .filter(preyClass::isInstance)
-                    .findFirst();
-            if (prey.isPresent() && random.nextDouble() < EAT_PROBABILITIES.get(preyClass)) {
-                satiety += prey.get().weight;
-                cell.removeAnimal(prey.get());
-                break;
-            }
-        }
+class Wolf extends Predator {
+    public Wolf(int x, int y, Island island) {
+        super(x, y, 50, 30, 3, 8, island, "W");
+        eatProbabilities.put(Rabbit.class, 0.6);
+        eatProbabilities.put(Mouse.class, 0.8);
     }
 }
 
-class Fox extends Animal {
-    private static final Map<Class<?>, Double> EAT_PROBABILITIES = new HashMap<>();
-    static { EAT_PROBABILITIES.put(Rabbit.class, 0.7); EAT_PROBABILITIES.put(Mouse.class, 0.9); }
-
-    public Fox(int x, int y, Island island) { super(x, y, 8, 30, 2, 2, island, "F"); }
-    public Fox(int x, int y, Island island, double initialSatiety) { super(x, y, 8, 30, 2, 2, island, "F", initialSatiety); }
-
-    @Override
-    public void eat(Cell cell) {
-        for (Class<?> preyClass : EAT_PROBABILITIES.keySet()) {
-            Optional<Animal> prey = cell.getAnimals().stream()
-                    .filter(preyClass::isInstance)
-                    .findFirst();
-            if (prey.isPresent() && random.nextDouble() < EAT_PROBABILITIES.get(preyClass)) {
-                satiety += prey.get().weight;
-                cell.removeAnimal(prey.get());
-                break;
-            }
-        }
+class Python extends Predator {
+    public Python(int x, int y, Island island) {
+        super(x, y, 15, 30, 1, 3, island, "P");
+        eatProbabilities.put(Rabbit.class, 0.2);
+        eatProbabilities.put(Mouse.class, 0.4);
     }
 }
 
-class Bear extends Animal {
-    private static final Map<Class<?>, Double> EAT_PROBABILITIES = new HashMap<>();
-    static { 
-        EAT_PROBABILITIES.put(Wolf.class, 0.8);
-        EAT_PROBABILITIES.put(Python.class, 0.8);
-        EAT_PROBABILITIES.put(Fox.class, 0.8);
-        EAT_PROBABILITIES.put(Rabbit.class, 0.8);
-        EAT_PROBABILITIES.put(Mouse.class, 0.9);
-    }
-
-    public Bear(int x, int y, Island island) { super(x, y, 500, 5, 2, 80, island, "B"); }
-    public Bear(int x, int y, Island island, double initialSatiety) { super(x, y, 500, 5, 2, 80, island, "B", initialSatiety); }
-
-    @Override
-    public void eat(Cell cell) {
-        for (Class<?> preyClass : EAT_PROBABILITIES.keySet()) {
-            Optional<Animal> prey = cell.getAnimals().stream()
-                    .filter(preyClass::isInstance)
-                    .findFirst();
-            if (prey.isPresent() && random.nextDouble() < EAT_PROBABILITIES.get(preyClass)) {
-                satiety += prey.get().weight;
-                cell.removeAnimal(prey.get());
-                break;
-            }
-        }
+class Fox extends Predator {
+    public Fox(int x, int y, Island island) {
+        super(x, y, 8, 30, 2, 2, island, "F");
+        eatProbabilities.put(Rabbit.class, 0.7);
+        eatProbabilities.put(Mouse.class, 0.9);
     }
 }
 
-class Eagle extends Animal {
-    private static final Map<Class<?>, Double> EAT_PROBABILITIES = new HashMap<>();
-    static { EAT_PROBABILITIES.put(Rabbit.class, 0.9); EAT_PROBABILITIES.put(Mouse.class, 0.9); }
-
-    public Eagle(int x, int y, Island island) { super(x, y, 6, 20, 3, 1, island, "E"); }
-    public Eagle(int x, int y, Island island, double initialSatiety) { super(x, y, 6, 20, 3, 1, island, "E", initialSatiety); }
-
-    @Override
-    public void eat(Cell cell) {
-        for (Class<?> preyClass : EAT_PROBABILITIES.keySet()) {
-            Optional<Animal> prey = cell.getAnimals().stream()
-                    .filter(preyClass::isInstance)
-                    .findFirst();
-            if (prey.isPresent() && random.nextDouble() < EAT_PROBABILITIES.get(preyClass)) {
-                satiety += prey.get().weight;
-                cell.removeAnimal(prey.get());
-                break;
-            }
-        }
+class Bear extends Predator {
+    public Bear(int x, int y, Island island) {
+        super(x, y, 500, 5, 2, 80, island, "B");
+        eatProbabilities.put(Wolf.class, 0.8);
+        eatProbabilities.put(Python.class, 0.8);
+        eatProbabilities.put(Fox.class, 0.8);
+        eatProbabilities.put(Rabbit.class, 0.8);
+        eatProbabilities.put(Mouse.class, 0.9);
     }
 }
 
-// Травоядные
-class Horse extends Animal {
-    public Horse(int x, int y, Island island) { super(x, y, 400, 20, 4, 60, island, "H"); }
-    public Horse(int x, int y, Island island, double initialSatiety) { super(x, y, 400, 20, 4, 60, island, "H", initialSatiety); }
+class Eagle extends Predator {
+    public Eagle(int x, int y, Island island) {
+        super(x, y, 6, 20, 3, 1, island, "E");
+        eatProbabilities.put(Rabbit.class, 0.9);
+        eatProbabilities.put(Mouse.class, 0.9);
+    }
+}
+
+// Классы травоядных
+abstract class Herbivore extends Animal {
+    public Herbivore(int x, int y, double weight, int maxPerCell, int speed, double foodRequired, Island island, String symbol) {
+        super(x, y, weight, maxPerCell, speed, foodRequired, island, symbol);
+    }
 
     @Override
     public void eat(Cell cell) {
         if (cell.getPlants() > 0) {
             cell.consumePlant();
-            satiety += 60;
+            satiety += 1.0;
         }
     }
 }
 
-class Deer extends Animal {
-    public Deer(int x, int y, Island island) { super(x, y, 300, 20, 4, 50, island, "D"); }
-    public Deer(int x, int y, Island island, double initialSatiety) { super(x, y, 300, 20, 4, 50, island, "D", initialSatiety); }
-
-    @Override
-    public void eat(Cell cell) {
-        if (cell.getPlants() > 0) {
-            cell.consumePlant();
-            satiety += 50;
-        }
+class Horse extends Herbivore {
+    public Horse(int x, int y, Island island) {
+        super(x, y, 400, 20, 4, 60, island, "H");
     }
 }
 
-class Rabbit extends Animal {
-    public Rabbit(int x, int y, Island island) { super(x, y, 2, 150, 2, 0.45, island, "R"); }
-    public Rabbit(int x, int y, Island island, double initialSatiety) { super(x, y, 2, 150, 2, 0.45, island, "R", initialSatiety); }
-
-    @Override
-    public void eat(Cell cell) {
-        if (cell.getPlants() > 0) {
-            cell.consumePlant();
-            satiety += 0.45;
-        }
+class Deer extends Herbivore {
+    public Deer(int x, int y, Island island) {
+        super(x, y, 300, 20, 4, 50, island, "D");
     }
 }
 
-class Mouse extends Animal {
-    public Mouse(int x, int y, Island island) { super(x, y, 0.05, 500, 1, 0.01, island, "M"); }
-    public Mouse(int x, int y, Island island, double initialSatiety) { super(x, y, 0.05, 500, 1, 0.01, island, "M", initialSatiety); }
-
-    @Override
-    public void eat(Cell cell) {
-        if (cell.getPlants() > 0) {
-            cell.consumePlant();
-            satiety += 0.01;
-        }
+class Rabbit extends Herbivore {
+    public Rabbit(int x, int y, Island island) {
+        super(x, y, 2, 150, 2, 0.45, island, "R");
     }
 }
 
-class Goat extends Animal {
-    public Goat(int x, int y, Island island) { super(x, y, 60, 140, 3, 10, island, "G"); }
-    public Goat(int x, int y, Island island, double initialSatiety) { super(x, y, 60, 140, 3, 10, island, "G", initialSatiety); }
-
-    @Override
-    public void eat(Cell cell) {
-        if (cell.getPlants() > 0) {
-            cell.consumePlant();
-            satiety += 10;
-        }
+class Mouse extends Herbivore {
+    public Mouse(int x, int y, Island island) {
+        super(x, y, 0.05, 500, 1, 0.01, island, "M");
     }
 }
 
-class Sheep extends Animal {
-    public Sheep(int x, int y, Island island) { super(x, y, 70, 140, 3, 15, island, "S"); }
-    public Sheep(int x, int y, Island island, double initialSatiety) { super(x, y, 70, 140, 3, 15, island, "S", initialSatiety); }
-
-    @Override
-    public void eat(Cell cell) {
-        if (cell.getPlants() > 0) {
-            cell.consumePlant();
-            satiety += 15;
-        }
+class Goat extends Herbivore {
+    public Goat(int x, int y, Island island) {
+        super(x, y, 60, 140, 3, 10, island, "G");
     }
 }
 
-class Boar extends Animal {
-    public Boar(int x, int y, Island island) { super(x, y, 400, 50, 2, 50, island, "O"); }
-    public Boar(int x, int y, Island island, double initialSatiety) { super(x, y, 400, 50, 2, 50, island, "O", initialSatiety); }
-
-    @Override
-    public void eat(Cell cell) {
-        if (cell.getPlants() > 0) {
-            cell.consumePlant();
-            satiety += 50;
-        }
+class Sheep extends Herbivore {
+    public Sheep(int x, int y, Island island) {
+        super(x, y, 70, 140, 3, 15, island, "S");
     }
 }
 
-class Buffalo extends Animal {
-    public Buffalo(int x, int y, Island island) { super(x, y, 700, 10, 3, 100, island, "U"); }
-    public Buffalo(int x, int y, Island island, double initialSatiety) { super(x, y, 700, 10, 3, 100, island, "U", initialSatiety); }
-
-    @Override
-    public void eat(Cell cell) {
-        if (cell.getPlants() > 0) {
-            cell.consumePlant();
-            satiety += 100;
-        }
+class Boar extends Herbivore {
+    public Boar(int x, int y, Island island) {
+        super(x, y, 400, 50, 2, 50, island, "O");
     }
 }
 
-class Duck extends Animal {
-    private static final Map<Class<?>, Double> EAT_PROBABILITIES = new HashMap<>();
-    static { EAT_PROBABILITIES.put(Caterpillar.class, 0.9); }
+class Buffalo extends Herbivore {
+    public Buffalo(int x, int y, Island island) {
+        super(x, y, 700, 10, 3, 100, island, "U");
+    }
+}
 
-    public Duck(int x, int y, Island island) { super(x, y, 1, 200, 4, 0.15, island, "K"); }
-    public Duck(int x, int y, Island island, double initialSatiety) { super(x, y, 1, 200, 4, 0.15, island, "K", initialSatiety); }
+class Duck extends Herbivore {
+    public Duck(int x, int y, Island island) {
+        super(x, y, 1, 200, 4, 0.15, island, "K");
+    }
 
     @Override
     public void eat(Cell cell) {
@@ -326,31 +224,25 @@ class Duck extends Animal {
     }
 }
 
-class Caterpillar extends Animal {
-    public Caterpillar(int x, int y, Island island) { super(x, y, 0.01, 1000, 0, 0, island, "C"); }
-    public Caterpillar(int x, int y, Island island, double initialSatiety) { super(x, y, 0.01, 1000, 0, 0, island, "C", initialSatiety); }
-
-    @Override
-    public void eat(Cell cell) {
-        if (cell.getPlants() > 0) {
-            cell.consumePlant();
-            satiety += 0.01;
-        }
+class Caterpillar extends Herbivore {
+    public Caterpillar(int x, int y, Island island) {
+        super(x, y, 0.01, 1000, 0, 0, island, "C");
     }
 }
 
+// Класс клетки
 class Cell {
     private List<Animal> animals = new CopyOnWriteArrayList<>();
-    private int plants;
+    private int plants = 0;
     private Random random = new Random();
 
-    public void addAnimal(Animal animal) {
+    public synchronized void addAnimal(Animal animal) {
         if (animals.size() < animal.maxPerCell) {
             animals.add(animal);
         }
     }
 
-    public void removeAnimal(Animal animal) {
+    public synchronized void removeAnimal(Animal animal) {
         animals.remove(animal);
     }
 
@@ -363,14 +255,17 @@ class Cell {
     }
 
     public synchronized void growPlants() {
-        if (random.nextInt(100) < 20) plants += 10;
+        if (random.nextInt(100) < 20) {
+            plants += 10;
+        }
     }
 
-    public int getPlants() {
+    public synchronized int getPlants() {
         return plants;
     }
 }
 
+// Класс острова
 class Island {
     private Cell[][] grid;
     private int width;
@@ -389,13 +284,13 @@ class Island {
 
     public void simulate() {
         ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2);
-        ExecutorService animalThreadPool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+        ExecutorService pool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 
         scheduler.scheduleAtFixedRate(() -> {
             // Рост растений
-            for (Cell[] row : grid) {
-                for (Cell cell : row) {
-                    cell.growPlants();
+            for (int i = 0; i < width; i++) {
+                for (int j = 0; j < height; j++) {
+                    grid[i][j].growPlants();
                 }
             }
 
@@ -405,7 +300,7 @@ class Island {
                 for (int j = 0; j < height; j++) {
                     Cell cell = grid[i][j];
                     for (Animal animal : cell.getAnimals()) {
-                        futures.add(animalThreadPool.submit(() -> {
+                        futures.add(pool.submit(() -> {
                             animal.eat(cell);
                             animal.reproduce(cell);
                             animal.move(this);
@@ -419,7 +314,7 @@ class Island {
             for (Future<?> future : futures) {
                 try {
                     future.get();
-                } catch (InterruptedException | ExecutionException e) {
+                } catch (Exception e) {
                     e.printStackTrace();
                 }
             }
@@ -431,11 +326,31 @@ class Island {
         }, 0, 1, TimeUnit.SECONDS);
     }
 
+    // Восстановленный метод отрисовки
+    public void drawIsland() {
+        System.out.println("\nОстров (" + width + "x" + height + "):");
+        System.out.println("=".repeat(width * 2 + 2));
+        
+        for (int j = 0; j < height; j++) {
+            System.out.print("|");
+            for (int i = 0; i < width; i++) {
+                Cell cell = grid[i][j];
+                List<Animal> animals = cell.getAnimals();
+                String symbol = animals.isEmpty()
+                    ? (cell.getPlants() > 0 ? "* " : ". ")
+                    : animals.get(0).getSymbol() + " ";
+                System.out.print(symbol);
+            }
+            System.out.println("|");
+        }
+        System.out.println("=".repeat(width * 2 + 2));
+    }
+
+    // Восстановленный метод статистики
     private void printStatistics() {
         Map<Class<?>, Integer> counts = new HashMap<>();
         int totalPlants = 0;
 
-        // Собираем статистику
         for (int i = 0; i < width; i++) {
             for (int j = 0; j < height; j++) {
                 Cell cell = grid[i][j];
@@ -446,63 +361,39 @@ class Island {
             }
         }
 
-        // Формируем вывод
         System.out.println("\nСтатистика:");
         System.out.println("Растений: " + totalPlants);
-        System.out.println("Хищники:");
-        printCount(counts, Wolf.class, "Волки");
-        printCount(counts, Python.class, "Удавы");
-        printCount(counts, Fox.class, "Лисы");
-        printCount(counts, Bear.class, "Медведи");
-        printCount(counts, Eagle.class, "Орлы");
-        
-        System.out.println("\nТравоядные:");
-        printCount(counts, Horse.class, "Лошади");
-        printCount(counts, Deer.class, "Олени");
-        printCount(counts, Rabbit.class, "Кролики");
-        printCount(counts, Mouse.class, "Мыши");
-        printCount(counts, Goat.class, "Козы");
-        printCount(counts, Sheep.class, "Овцы");
-        printCount(counts, Boar.class, "Кабаны");
-        printCount(counts, Buffalo.class, "Буйволы");
-        printCount(counts, Duck.class, "Утки");
-        printCount(counts, Caterpillar.class, "Гусеницы");
+        printGroup("Хищники", counts, Wolf.class, Python.class, Fox.class, Bear.class, Eagle.class);
+        printGroup("Травоядные", counts, Horse.class, Deer.class, Rabbit.class, Mouse.class, 
+            Goat.class, Sheep.class, Boar.class, Buffalo.class, Duck.class, Caterpillar.class);
     }
 
-    private void printCount(Map<Class<?>, Integer> counts, Class<?> clazz, String name) {
-        System.out.printf("%-10s: %d\n", name, counts.getOrDefault(clazz, 0));
-    }
-
-    public void drawIsland() {
-        System.out.println("\nОстров (" + width + "x" + height + "):");
-        System.out.println("=".repeat(width * 2 + 2));
-        
-        for (int j = 0; j < height; j++) {
-            System.out.print("|");
-            for (int i = 0; i < width; i++) {
-                Cell cell = grid[i][j];
-                List<Animal> animals = cell.getAnimals();
-                String cellSymbol = animals.isEmpty() 
-                    ? (cell.getPlants() > 0 ? "* " : ". ")
-                    : animals.get(0).getSymbol() + " ";
-                System.out.print(cellSymbol);
-            }
-            System.out.println("|");
+    private void printGroup(String groupName, Map<Class<?>, Integer> counts, Class<?>... classes) {
+        System.out.println(groupName + ":");
+        for (Class<?> clazz : classes) {
+            System.out.printf("%-10s: %d\n", clazz.getSimpleName(), counts.getOrDefault(clazz, 0));
         }
-        System.out.println("=".repeat(width * 2 + 2));
     }
 
-    public int getWidth() { return width; }
-    public int getHeight() { return height; }
-    public Cell getCell(int x, int y) { return grid[x][y]; }
+    public int getWidth() {
+        return width;
+    }
+
+    public int getHeight() {
+        return height;
+    }
+
+    public Cell getCell(int x, int y) {
+        return grid[x][y];
+    }
 }
 
+// Главный класс
 public class App {
     public static void main(String[] args) {
-        Island island = new Island(50, 20); // Уменьшил размер для примера
-
-        // Инициализация популяции
+        Island island = new Island(50, 20);
         Random rnd = new Random();
+
         addAnimals(island, Wolf.class, 20, rnd);
         addAnimals(island, Python.class, 10, rnd);
         addAnimals(island, Fox.class, 10, rnd);
@@ -511,7 +402,7 @@ public class App {
         addAnimals(island, Horse.class, 20, rnd);
         addAnimals(island, Deer.class, 20, rnd);
         addAnimals(island, Rabbit.class, 30, rnd);
-        addAnimals(island, Mouse.class, 50, rnd);
+        //addAnimals(island, Mouse.class, 50, rnd);
         addAnimals(island, Goat.class, 20, rnd);
         addAnimals(island, Sheep.class, 20, rnd);
         addAnimals(island, Boar.class, 10, rnd);
