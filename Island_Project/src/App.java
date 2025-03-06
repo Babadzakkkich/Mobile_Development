@@ -4,7 +4,6 @@ import island.Island;
 import java.util.Random;
 import predators.*;
 
-// Главный класс
 public class App {
     public static void main(String[] args) {
         Island island = new Island(50, 20);
