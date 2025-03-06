@@ -1,4 +1,3 @@
-// Island.java
 package island;
 
 import abstract_animals.Animal;
