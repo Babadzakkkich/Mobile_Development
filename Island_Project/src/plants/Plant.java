@@ -1,4 +1,3 @@
-// Plant.java
 package plants;
 
 public class Plant {
