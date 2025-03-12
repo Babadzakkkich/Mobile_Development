@@ -6,24 +6,24 @@ import predators.*;
 
 public class App {
     public static void main(String[] args) {
-        Island island = new Island(50, 20);
+        Island island = new Island(50, 15);
         Random rnd = new Random();
 
-        addAnimals(island, Wolf.class, 50, rnd);
-        addAnimals(island, Python.class, 30, rnd);
-        addAnimals(island, Fox.class, 25, rnd);
-        addAnimals(island, Bear.class, 15, rnd);
-        addAnimals(island, Eagle.class, 20, rnd);
-        addAnimals(island, Horse.class, 40, rnd);
-        addAnimals(island, Deer.class, 30, rnd);
-        addAnimals(island, Rabbit.class, 30, rnd);
-        addAnimals(island, Mouse.class, 20, rnd);
-        addAnimals(island, Goat.class, 30, rnd);
-        addAnimals(island, Sheep.class, 30, rnd);
-        addAnimals(island, Boar.class, 30, rnd);
-        addAnimals(island, Buffalo.class, 20, rnd);
+        addAnimals(island, Wolf.class, 40, rnd);
+        addAnimals(island, Python.class, 50, rnd);
+        addAnimals(island, Fox.class, 40, rnd);
+        addAnimals(island, Bear.class, 30, rnd);
+        addAnimals(island, Eagle.class, 30, rnd);
+        addAnimals(island, Horse.class, 70, rnd);
+        addAnimals(island, Deer.class, 55, rnd);
+        addAnimals(island, Rabbit.class, 50, rnd);
+        addAnimals(island, Mouse.class, 70, rnd);
+        addAnimals(island, Goat.class, 50, rnd);
+        addAnimals(island, Sheep.class, 50, rnd);
+        addAnimals(island, Boar.class, 50, rnd);
+        addAnimals(island, Buffalo.class, 40, rnd);
         addAnimals(island, Duck.class, 20, rnd);
-        addAnimals(island, Caterpillar.class, 50, rnd);
+        addAnimals(island, Caterpillar.class, 2000, rnd);
 
         island.simulate();
     }
