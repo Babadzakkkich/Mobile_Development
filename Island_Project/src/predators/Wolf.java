@@ -1,14 +1,13 @@
 package predators;
 
-import java.util.Map;
-
 import abstract_animals.Predator;
 import herbivores.*;
 import island.Island;
+import java.util.Map;
 
 public class Wolf extends Predator {
     public Wolf(int x, int y, Island island) {
-        super(x, y, 50, 30, 3, 8, island, "🐺");
+        super(x, y, 50, 30, 3, 8, island, "W");
         setEatProbabilities(Map.of(
             Horse.class, 0.1,
             Deer.class, 0.15,
@@ -23,7 +22,7 @@ public class Wolf extends Predator {
     }
 
     public Wolf(int x, int y, Island island, double initialSatiety) {
-        super(x, y, 50, 30, 3, 8, island, "🐺", initialSatiety);
+        super(x, y, 50, 30, 3, 8, island, "W", initialSatiety);
         setEatProbabilities(Map.of(
             Horse.class, 0.1,
             Deer.class, 0.15,
