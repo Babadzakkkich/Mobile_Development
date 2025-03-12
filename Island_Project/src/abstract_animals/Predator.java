@@ -10,9 +10,13 @@ import java.util.Optional;
 public abstract class Predator extends Animal {
     protected Map<Class<?>, Double> eatProbabilities;
 
-    public Predator(int x, int y, double weight, int maxPerCell, int speed, 
-                    double foodRequired, Island island, String symbol) {
+    public Predator(int x, int y, double weight, int maxPerCell, int speed, double foodRequired, Island island, String symbol) {
         super(x, y, weight, maxPerCell, speed, foodRequired, island, symbol);
+        this.eatProbabilities = new HashMap<>();
+    }
+
+    public Predator(int x, int y, double weight, int maxPerCell, int speed, double foodRequired, Island island, String symbol, double initialSatiety) {
+        super(x, y, weight, maxPerCell, speed, foodRequired, island, symbol, initialSatiety);
         this.eatProbabilities = new HashMap<>();
     }
 

@@ -7,7 +7,7 @@ import java.util.Random;
 
 public abstract class Animal {
     public static final double REPRODUCTION_THRESHOLD = 0.5;
-    public static final double NEWBORN_SATIETY = 0.1;
+    public static final double NEWBORN_SATIETY = 0.5;
     public static final Random random = new Random();
 
     public int x;
@@ -36,32 +36,44 @@ public abstract class Animal {
         this.symbol = symbol;
     }
     
+    // Конструктор для новорождённых
     public Animal(int x, int y, double weight, int maxPerCell, int speed, 
-        double foodRequired, Island island, String symbol, double initialSatiety) {
+                  double foodRequired, Island island, String symbol, double initialSatiety) {
         this(x, y, weight, maxPerCell, speed, foodRequired, island, symbol);
         this.satiety = initialSatiety;
     }
+
     public abstract void eat(Cell cell);
 
     public void reproduce(Cell cell) {
-        synchronized (cell) {
-            long sameSpeciesCount = cell.getAnimals().stream()
-                .filter(a -> a.getClass() == this.getClass())
-                .count();
-    
-            if (satiety >= foodRequired * REPRODUCTION_THRESHOLD &&
-                sameSpeciesCount >= 2 && // Минимум 2 особи
-                random.nextDouble() < 0.5 &&
-                cell.getAnimals().size() < maxPerCell) {
-                    
-                try {
-                    Animal child = this.getClass()
-                        .getDeclaredConstructor(int.class, int.class, Island.class)
-                        .newInstance(x, y, island);
-                    cell.addAnimal(child);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+            synchronized (cell) {
+                long sameSpeciesCount = cell.getAnimals().stream()
+                        .filter(a -> a.getClass() == this.getClass())
+                        .count();
+
+                if (satiety >= foodRequired * REPRODUCTION_THRESHOLD &&
+                    sameSpeciesCount >= 2 &&
+                    random.nextDouble() < 0.5 &&
+                    cell.getAnimals().size() < maxPerCell) {
+
+                    try {
+                        Animal child = this.getClass()
+                                .getDeclaredConstructor(
+                                    int.class, 
+                                    int.class, 
+                                    Island.class,
+                                    double.class
+                                )
+                                .newInstance(
+                                    x, 
+                                    y, 
+                                    island,
+                                    NEWBORN_SATIETY * foodRequired
+                                );
+                        cell.addAnimal(child);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
             }
         }
     }
@@ -83,7 +95,7 @@ public abstract class Animal {
     }
 
     public void loseEnergy() {
-        satiety -= 0.1 * foodRequired;
+        satiety -= 0.07 * foodRequired;
         if (satiety <= 0) {
             die();
         }
