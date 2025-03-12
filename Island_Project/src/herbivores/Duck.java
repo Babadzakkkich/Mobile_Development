@@ -12,6 +12,10 @@ public class Duck extends Herbivore {
         super(x, y, 1, 200, 4, 0.15, island, "K");
     }
 
+    public Duck(int x, int y, Island island, double initialSatiety) {
+        super(x, y, 1, 200, 4, 0.15, island, "K", initialSatiety);
+    }
+
     @Override
     public void eat(Cell cell) {
         List<Animal> caterpillars = cell.getAnimals().stream()

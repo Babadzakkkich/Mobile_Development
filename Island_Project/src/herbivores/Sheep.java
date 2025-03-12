@@ -7,4 +7,8 @@ public class Sheep extends Herbivore {
     public Sheep(int x, int y, Island island) {
         super(x, y, 70, 140, 3, 15, island, "S");
     }
+
+    public Sheep(int x, int y, Island island, double initialSatiety) {
+        super(x, y, 70, 140, 3, 15, island, "S", initialSatiety);
+    }
 }
