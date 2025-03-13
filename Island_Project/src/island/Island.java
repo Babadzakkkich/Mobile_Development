@@ -27,14 +27,12 @@ public class Island {
         ExecutorService pool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 
         scheduler.scheduleAtFixedRate(() -> {
-            // Рост растений
             for (int i = 0; i < width; i++) {
                 for (int j = 0; j < height; j++) {
                     grid[i][j].growPlants();
                 }
             }
 
-            // Обработка животных
             List<Future<?>> futures = new ArrayList<>();
             for (int i = 0; i < width; i++) {
                 for (int j = 0; j < height; j++) {
@@ -50,7 +48,6 @@ public class Island {
                 }
             }
 
-            // Ожидание завершения задач
             for (Future<?> future : futures) {
                 try {
                     future.get();
@@ -59,7 +56,6 @@ public class Island {
                 }
             }
 
-            // Вывод состояния
             drawIsland();
             printStatistics();
 
