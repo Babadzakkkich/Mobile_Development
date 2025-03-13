@@ -65,7 +65,7 @@ public class Island {
     private void printStatistics() {
         Map<Class<?>, Integer> counts = new HashMap<>();
         int totalPlants = 0;
-
+    
         for (int i = 0; i < width; i++) {
             for (int j = 0; j < height; j++) {
                 Cell cell = grid[i][j];
@@ -75,18 +75,24 @@ public class Island {
                 }
             }
         }
-
+    
         System.out.println("\nСтатистика:");
         printGroup("Хищники", counts, Wolf.class, Python.class, Fox.class, Bear.class, Eagle.class);
         printGroup("Травоядные", counts, Horse.class, Deer.class, Rabbit.class, Mouse.class, 
             Goat.class, Sheep.class, Boar.class, Buffalo.class, Duck.class, Caterpillar.class);
         System.out.println("Растений: " + totalPlants);
     }
-
+    
     private void printGroup(String groupName, Map<Class<?>, Integer> counts, Class<?>... classes) {
         System.out.println(groupName + ":");
         for (Class<?> clazz : classes) {
-            System.out.printf("%-10s: %d\n", clazz.getSimpleName(), counts.getOrDefault(clazz, 0));
+            try {
+                Animal instance = (Animal) clazz.getDeclaredConstructor(int.class, int.class, Island.class).newInstance(0, 0, null);
+                String symbol = instance.getSymbol();
+                System.out.printf("%-10s(%s): %d\n", clazz.getSimpleName(), symbol, counts.getOrDefault(clazz, 0));
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 
