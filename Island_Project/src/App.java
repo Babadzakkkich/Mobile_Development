@@ -6,7 +6,7 @@ import predators.*;
 
 public class App {
     public static void main(String[] args) {
-        Island island = new Island(50, 15);
+        Island island = new Island(40, 15);
         Random rnd = new Random();
 
         addAnimals(island, Wolf.class, 40, rnd);

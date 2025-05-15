@@ -27,7 +27,7 @@ public class Cell {
     }
 
     public synchronized List<Plant> getPlants() {
-        return new ArrayList<>(plants); // Возвращаем копию списка
+        return new ArrayList<>(plants);
     }
 
     public synchronized void addPlant(Plant plant) {
@@ -45,7 +45,7 @@ public class Cell {
     }
 
     public synchronized void growPlants() {
-        if (plants.size() < Plant.MAX_PER_CELL && random.nextInt(100) < 20) {
+        if (plants.size() < Plant.MAX_PER_CELL && random.nextInt(100) < 30) {
             plants.add(new Plant());
         }
     }

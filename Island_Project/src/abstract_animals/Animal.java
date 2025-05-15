@@ -36,7 +36,6 @@ public abstract class Animal {
         this.symbol = symbol;
     }
     
-    // Конструктор для новорождённых
     public Animal(int x, int y, double weight, int maxPerCell, int speed, 
                   double foodRequired, Island island, String symbol, double initialSatiety) {
         this(x, y, weight, maxPerCell, speed, foodRequired, island, symbol);
