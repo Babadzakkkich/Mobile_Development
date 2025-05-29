@@ -65,22 +65,29 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         int id = v.getId();
 
-        if (id == R.id.btnAdd) {
-            oper = "+";
-            result = num1 + num2;
-        } else if (id == R.id.btnSub) {
-            oper = "-";
-            result = num1 - num2;
-        } else if (id == R.id.btnMult) {
-            oper = "×";
-            result = num1 * num2;
-        } else if (id == R.id.btnDiv) {
-            if (num2 == 0) {
-                tvResult.setText("Ошибка: деление на ноль");
-                return;
-            }
-            oper = "÷";
-            result = num1 / num2;
+        switch (id) {
+            case R.id.btnAdd:
+                oper = "+";
+                result = num1 + num2;
+                break;
+            case R.id.btnSub:
+                oper = "-";
+                result = num1 - num2;
+                break;
+            case R.id.btnMult:
+                oper = "×";
+                result = num1 * num2;
+                break;
+            case R.id.btnDiv:
+                if (num2 == 0) {
+                    tvResult.setText("Ошибка: деление на ноль");
+                    return;
+                }
+                oper = "÷";
+                result = num1 / num2;
+                break;
+            default:
+                return; 
         }
 
         tvResult.setText(num1 + " " + oper + " " + num2 + " = " + result);
